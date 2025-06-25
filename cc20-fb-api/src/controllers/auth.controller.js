@@ -1,7 +1,9 @@
 import prisma from "../config/prisma.config.js";
+import { createUser, getUserBy } from "../service/user.service.js";
 import checkIdentity from "../utils/check-identity.util.js";
 import createError from "../utils/create-error.util.js";
 import bcrypt from "bcryptjs";
+import jwt from 'jsonwebtoken'
 
 export async function register(req, res, next) {
   try {
@@ -49,8 +51,67 @@ export async function register(req, res, next) {
   }
 }
 
-export const login = (req, res, next) => {
-  res.json({ message: "Login controller", body: req.body });
+export async function registerYup(req, res, next) {
+  console.log(req.body);
+  try {
+    const { email, mobile, firstName, lastName, password } = req.body;
+
+    // หา user
+    if (email) {
+      // let foundUserEmail = await prisma.user.findUnique({
+      //   where: { email: email },
+      // });
+      let foundUserEmail = await getUserBy("email", email)
+      if (foundUserEmail) createError(409, `Email : ${email} already register`);
+    }
+    if (mobile) {
+      // let foundUserEmail = await prisma.user.findUnique({
+      //   where: { mobile: mobile },
+      // });
+      let foundUserEmail = await getUserBy("moblie", mobile)
+      if (foundUserEmail)
+        createError(409, `Email : ${mobile} already register`);
+    }
+    const newUser = {
+      email,
+      mobile,
+      password: await bcrypt.hash(password, 10),
+      firstName,
+      lastName,
+    };
+
+    const result = await createUser(newUser)
+    res.json({ msg: `Register success`, result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export const login = async (req, res, next) => {
+  const {identity , password, email, mobile} = req.body
+  const identityKey = email ? "email" : "moblie"
+  
+  // หา user
+  // const foundUser = await prisma.user.findUnique({
+  //   where: {[identityKey] : identity}
+  // })
+
+  const foundUser = await getUserBy(identityKey, identity)
+  
+  if(!foundUser) {
+    createError(401, 'Invalid Login')
+  }
+  let pwOk = await bcrypt.compare(password ,  foundUser.password)
+  if(!pwOk) {
+    createError(401, 'Invalid Login')
+  }
+  // create token
+  const payload = {id: foundUser.id}
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    algorithm : "HS256",
+    expiresIn : "1d"
+  })
+  res.json({ message: "Login Successful", token: token });
 };
 
 export const getMe = async (req, res) => {
