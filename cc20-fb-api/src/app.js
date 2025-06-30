@@ -2,9 +2,13 @@ import express from "express";
 import authRoute from "./routes/auth.route.js";
 import notFoundMiddleware from "./middleware/not-found.middleware.js";
 import errorMiddleware from "./middleware/error.middleware.js";
+import cors from 'cors'
 
 const app = express();
 app.use(express.json());
+app.use(cors({
+  origin : "http://localhost:5173"
+}))
 
 app.use("/api/auth", authRoute);
 app.use("/api/post", (req, res) => {

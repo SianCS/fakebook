@@ -3,7 +3,7 @@ import { createUser, getUserBy } from "../service/user.service.js";
 import checkIdentity from "../utils/check-identity.util.js";
 import createError from "../utils/create-error.util.js";
 import bcrypt from "bcryptjs";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 
 export async function register(req, res, next) {
   try {
@@ -61,14 +61,14 @@ export async function registerYup(req, res, next) {
       // let foundUserEmail = await prisma.user.findUnique({
       //   where: { email: email },
       // });
-      let foundUserEmail = await getUserBy("email", email)
+      let foundUserEmail = await getUserBy("email", email);
       if (foundUserEmail) createError(409, `Email : ${email} already register`);
     }
     if (mobile) {
       // let foundUserEmail = await prisma.user.findUnique({
       //   where: { mobile: mobile },
       // });
-      let foundUserEmail = await getUserBy("moblie", mobile)
+      let foundUserEmail = await getUserBy("mobile", mobile);
       if (foundUserEmail)
         createError(409, `Email : ${mobile} already register`);
     }
@@ -80,43 +80,43 @@ export async function registerYup(req, res, next) {
       lastName,
     };
 
-    const result = await createUser(newUser)
-    res.json({ msg: `Register success`, result });
+    await createUser(newUser);
+    res.json({ message: `Register success` });
   } catch (err) {
     next(err);
   }
 }
 
 export const login = async (req, res, next) => {
-  const {identity , password, email, mobile} = req.body
-  const identityKey = email ? "email" : "moblie"
-  
+  const { identity, password, email, mobile } = req.body;
+  const identityKey = email ? "email" : "mobile";
+
   // หา user
   // const foundUser = await prisma.user.findUnique({
   //   where: {[identityKey] : identity}
   // })
 
-  const foundUser = await getUserBy(identityKey, identity)
-  
-  if(!foundUser) {
-    createError(401, 'Invalid Login')
+  const foundUser = await getUserBy(identityKey, identity);
+
+  if (!foundUser) {
+    createError(401, "Invalid Login");
   }
-  let pwOk = await bcrypt.compare(password ,  foundUser.password)
-  if(!pwOk) {
-    createError(401, 'Invalid Login')
+  let pwOk = await bcrypt.compare(password, foundUser.password);
+  if (!pwOk) {
+    createError(401, "Invalid Login");
   }
   // create token
-  const payload = {id: foundUser.id}
+  const payload = { id: foundUser.id };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    algorithm : "HS256",
-    expiresIn : "1d"
-  })
-  res.json({ message: "Login Successful", token: token });
+    algorithm: "HS256",
+    expiresIn: "1d",
+  });
+
+  const { password: pw, createdAt, updatedAt, ...userData } = foundUser;
+
+  res.json({ message: "Login Successful", token: token, user: userData });
 };
 
 export const getMe = async (req, res) => {
-  let numUser = await prisma.user.count();
-  console.log(numUser);
-  createError(403, "Block !!!");
-  res.json({ message: "getMe controller", numUser });
+  res.json({ user: req.user });
 };
